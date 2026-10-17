@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+:root {
+  --gold: #dfb15b;
+  --gold-bright: #ffd978;
+  --gold-dark: #825f1b;
+  --yellow-guard: #ffe600;
+  --bg: #07090e;
+  --panel-bg: rgba(13, 17, 23, 0.90);
+  --panel-border: rgba(223, 177, 91, 0.32);
+  --cyan-accent: #00f0ff;
+  --laser-red: #ff3366;
+  --text-muted: #a6b7cd;
+  --text: #f0f6fc;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-cinzel: 'Cinzel', serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.font-cinzel {
+  font-family: var(--font-cinzel);
+}
+
+.font-mono-custom {
+  font-family: var(--font-mono);
+}
+
+/* CRT Scanline Overlay */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.32) 50%);
+  background-size: 100% 3px;
+  z-index: 1000;
+  pointer-events: none;
+  opacity: 0.6;
+  will-change: opacity;
+  transition: opacity 0.3s ease;
+}
+
+.crt-overlay.disabled {
+  display: none;
+}
+
+/* Custom scrollbars for telemetry */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.4);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(223, 177, 91, 0.35);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(223, 177, 91, 0.6);
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

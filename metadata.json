@@ -1,0 +1,6 @@
+{
+  "name": "Kingdom of Murabba - SNBV Command Core & 3D Defense",
+  "description": "Interactive 3D tactical command core and sovereign defense game for the Kingdom of Murabba, featuring the Mukaab Matrix, 7 sacred totems, 221-nation global grid defense, and real-time telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Volume2, VolumeX, Monitor, Pause, Terminal, Zap, ShieldAlert } from 'lucide-react';
-import { PlayerStats, SovereignNode } from '../types/game';
+import { Volume2, VolumeX, Monitor, Pause, Terminal, Zap, ShieldAlert, Eye, Map } from 'lucide-react';
+import { CameraMode, PlayerStats, SovereignNode } from '../types/game';
 import { TOTEMS } from '../data/sovereignData';
+import { CAMPAIGN_CHAPTERS } from '../data/campaignData';
 import { sound } from '../audio/SoundSynth';
 
 interface PerimeterHudProps {
@@ -13,6 +14,9 @@ interface PerimeterHudProps {
   onToggleAudio: () => void;
   crtEnabled: boolean;
   onToggleCrt: () => void;
+  cameraMode: CameraMode;
+  onToggleCamera: () => void;
+  onOpenCampaignSelect: () => void;
 }
 
 export const PerimeterHud: React.FC<PerimeterHudProps> = ({
@@ -24,12 +28,16 @@ export const PerimeterHud: React.FC<PerimeterHudProps> = ({
   onToggleAudio,
   crtEnabled,
   onToggleCrt,
+  cameraMode,
+  onToggleCamera,
+  onOpenCampaignSelect,
 }) => {
   const activeTotemSpec = TOTEMS[stats.activeTotem] || TOTEMS.A;
+  const currentChapter = CAMPAIGN_CHAPTERS[stats.chapter] || CAMPAIGN_CHAPTERS[1];
 
   // Calculate live grid integrity
   const totalHealthyNodes = nodes.filter(n => n.status !== 'CRITICAL').length;
-  const gridIntegrityPct = Math.round((totalHealthyNodes / nodes.length) * 100);
+  const gridIntegrityPct = Math.round((totalHealthyNodes / Math.max(1, nodes.length)) * 100);
 
   return (
     <div className="absolute inset-0 z-10 pointer-events-none select-none flex flex-col justify-between p-4 sm:p-6">
@@ -88,19 +96,29 @@ export const PerimeterHud: React.FC<PerimeterHudProps> = ({
           </div>
         </div>
 
-        {/* Top-Center: Sovereign Grid Integrity Ribbon */}
+        {/* Top-Center: Chapter, Wave & Grid Integrity Ribbon */}
         <div className="pointer-events-auto bg-[#07090e]/85 border border-[#dfb15b]/35 px-4 py-2 rounded shadow-lg text-center hidden md:flex flex-col items-center">
           <div className="flex items-center gap-2 mb-0.5">
             <ShieldAlert className="w-3.5 h-3.5 text-[#00f0ff]" />
             <span className="text-xs font-bold tracking-wider text-[#ffd978] font-mono-custom">
-              SOVEREIGN GRID INTEGRITY
+              {currentChapter.code} // {currentChapter.title}
             </span>
             <span className="text-xs text-[#00f0ff] font-mono-custom font-bold tabular-nums">
               {gridIntegrityPct}%
             </span>
           </div>
-          <div className="text-[10px] text-[#a6b7cd] font-mono-custom">
-            221 WORLD NODES · WAVE <span className="text-[#ffd978] font-bold">{stats.wave}</span>
+          <div className="text-[10px] text-[#a6b7cd] font-mono-custom flex items-center gap-2">
+            <span>221 ALLIANCE RELAYS</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              WAVE <span className="text-[#ffd978] font-bold">{stats.wave}</span> / {stats.totalWavesInChapter}
+            </span>
+            {stats.bossActive && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="text-red-400 font-bold animate-pulse">TITAN ACTIVE</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -142,6 +160,31 @@ export const PerimeterHud: React.FC<PerimeterHudProps> = ({
 
           {/* Quick HUD Buttons */}
           <div className="flex items-center gap-1.5 pt-1 border-t border-[#dfb15b]/20">
+            {/* Camera View Switcher */}
+            <button
+              onClick={() => {
+                sound.playClick();
+                onToggleCamera();
+              }}
+              title="Toggle Camera View (Hotkey C)"
+              className="flex items-center gap-1 px-2 py-1 bg-black/60 hover:bg-[#dfb15b]/20 border border-[#dfb15b]/30 text-[#00f0ff] text-[10px] font-mono-custom font-bold rounded transition-colors"
+            >
+              <Eye className="w-3 h-3 text-[#00f0ff]" />
+              <span>{cameraMode === 'CHASE' ? 'OVERVIEW' : 'CHASE'}</span>
+            </button>
+
+            {/* Campaign Select Modal Launcher */}
+            <button
+              onClick={() => {
+                sound.playClick();
+                onOpenCampaignSelect();
+              }}
+              title="Campaign Sectors"
+              className="p-1.5 bg-black/60 hover:bg-[#dfb15b]/20 border border-[#dfb15b]/30 text-[#ffd978] rounded transition-colors"
+            >
+              <Map className="w-3.5 h-3.5" />
+            </button>
+
             <button
               onClick={() => {
                 sound.playClick();

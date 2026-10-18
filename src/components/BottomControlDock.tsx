@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Radio, Zap, Shield, Sparkles, Terminal } from 'lucide-react';
-import { TotemId, TotemSpec } from '../types/game';
+import React, { useEffect, useState } from 'react';
+import { ChevronDown, ChevronUp, Radio, Sparkles, Terminal, Eye } from 'lucide-react';
+import { CameraMode, TotemId, TotemSpec } from '../types/game';
 import { TOTEMS } from '../data/sovereignData';
 import { sound } from '../audio/SoundSynth';
 
@@ -11,6 +11,8 @@ interface BottomControlDockProps {
   onTriggerHarmonicWave: () => void;
   onOpenConsole: () => void;
   resonance460k: number;
+  cameraMode?: CameraMode;
+  onToggleCamera?: () => void;
 }
 
 export const BottomControlDock: React.FC<BottomControlDockProps> = ({
@@ -20,11 +22,25 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
   onTriggerHarmonicWave,
   onOpenConsole,
   resonance460k,
+  cameraMode = 'CHASE',
+  onToggleCamera,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const totemList: TotemSpec[] = Object.values(TOTEMS);
   const activeSpec = TOTEMS[activeTotem] || TOTEMS.A;
+
+  // Global hotkey H to toggle dock collapse
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.code === 'KeyH' && !e.ctrlKey && !e.metaKey) {
+        setIsCollapsed(prev => !prev);
+        sound.playClick();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   return (
     <div
@@ -96,12 +112,26 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
 
           {/* Action Trigger Buttons */}
           <div className="flex items-center gap-2">
+            {onToggleCamera && (
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  onToggleCamera();
+                }}
+                title="Toggle Tactical / Chase Camera View (C)"
+                className="flex items-center gap-1 px-2.5 py-1 bg-black/50 hover:bg-white/10 border border-[#00f0ff]/40 text-[#00f0ff] font-bold rounded transition-colors"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>{cameraMode === 'CHASE' ? 'Overview [C]' : 'Chase [C]'}</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 sound.playClick();
                 onTriggerPulse();
               }}
-              className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-[#dfb15b]/20 to-[#825f1b]/30 hover:from-[#ffd978] hover:to-[#dfb15b] border border-[#dfb15b] text-[#ffd978] hover:text-black font-bold rounded transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-[#dfb15b]/20 to-[#825f1b]/30 hover:from-[#ffd978] hover:to-[#dfb15b] border border-[#dfb15b] text-[#ffd978] hover:text-black font-bold rounded transition-colors cursor-pointer"
             >
               <Radio className="w-3.5 h-3.5" />
               <span>Laser Pulse</span>
@@ -128,7 +158,7 @@ export const BottomControlDock: React.FC<BottomControlDockProps> = ({
                 sound.playClick();
                 onOpenConsole();
               }}
-              className="flex items-center gap-1 px-2.5 py-1 bg-[#0d1117] hover:bg-white/10 border border-white/20 text-[#00f0ff] rounded transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 bg-[#0d1117] hover:bg-white/10 border border-white/20 text-[#00f0ff] rounded transition-colors cursor-pointer"
             >
               <Terminal className="w-3.5 h-3.5" />
               <span>Console</span>

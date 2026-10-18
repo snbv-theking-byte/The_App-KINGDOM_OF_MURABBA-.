@@ -268,6 +268,100 @@ class SoundSynthesizer {
     osc.start(t);
     osc.stop(t + 0.16);
   }
+
+  public playBossWarning() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx || !this.masterGain) return;
+
+    const t = this.ctx.currentTime;
+    // Ominous low siren with sawtooth harmonics
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(95, t);
+    osc.frequency.linearRampToValueAtTime(160, t + 0.4);
+    osc.frequency.linearRampToValueAtTime(90, t + 0.8);
+
+    gain.gain.setValueAtTime(0.14, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.85);
+  }
+
+  public playBossPhaseShift() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx || !this.masterGain) return;
+
+    const t = this.ctx.currentTime;
+    // Frequency warp and electrical static
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.exponentialRampToValueAtTime(880, t + 0.25);
+    osc.frequency.exponentialRampToValueAtTime(110, t + 0.5);
+
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(t);
+    osc.stop(t + 0.55);
+  }
+
+  public playBossDefeated() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx || !this.masterGain) return;
+
+    const t = this.ctx.currentTime;
+    // Grand triumphant golden chord (C - E - G - B - High C)
+    const freqs = [261.63, 329.63, 392.0, 493.88, 523.25, 659.25];
+    freqs.forEach((freq, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.08);
+
+      gain.gain.setValueAtTime(0.08, t + idx * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + idx * 0.08 + 1.2);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain!);
+      osc.start(t + idx * 0.08);
+      osc.stop(t + idx * 0.08 + 1.2);
+    });
+  }
+
+  public playChapterComplete() {
+    if (this.isMuted) return;
+    this.init();
+    if (!this.ctx || !this.masterGain) return;
+
+    const t = this.ctx.currentTime;
+    // Radiant fanfare
+    const notes = [440, 554.37, 659.25, 880];
+    notes.forEach((freq, i) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + i * 0.1);
+
+      gain.gain.setValueAtTime(0.09, t + i * 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.1 + 0.8);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain!);
+      osc.start(t + i * 0.1);
+      osc.stop(t + i * 0.1 + 0.8);
+    });
+  }
 }
 
 export const sound = new SoundSynthesizer();

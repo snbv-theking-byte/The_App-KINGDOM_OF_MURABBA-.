@@ -6,8 +6,27 @@ import { PerimeterHud } from './components/PerimeterHud';
 import { BottomControlDock } from './components/BottomControlDock';
 import { TacticalConsoleModal } from './components/TacticalConsoleModal';
 import { EndGameModal } from './components/EndGameModal';
-import { GameState, PlayerStats, SovereignNode, TelemetryLogEntry, TotemId } from './types/game';
-import { KEY_RADAR_NODES, TOTEMS } from './data/sovereignData';
+import { BossStatusBar } from './components/BossStatusBar';
+import { CampaignSelectModal } from './components/CampaignSelectModal';
+import { ChapterClearModal } from './components/ChapterClearModal';
+import { ReplayHud } from './components/ReplayHud';
+import {
+  BossLiveState,
+  CameraMode,
+  CampaignProgress,
+  ChapterConfig,
+  ChapterId,
+  GameState,
+  PlayerStats,
+  ReplayCameraPerspective,
+  ReplayState,
+  SovereignNode,
+  TelemetryLogEntry,
+  TotemId,
+} from './types/game';
+import { KEY_RADAR_NODES } from './data/sovereignData';
+import { loadCampaignProgress } from './data/campaignData';
+import { MANIFESTO_CONFIG } from './data/manifestoData';
 import { sound } from './audio/SoundSynth';
 
 export default function App() {
@@ -15,8 +34,33 @@ export default function App() {
   const controllerRef = useRef<GameController | null>(null);
   const threeSceneRef = useRef<ThreeGameScene | null>(null);
 
-  // React State for UI HUD (updated at throttled intervals from simulation)
+  // React State for UI HUD & Campaign
   const [gameState, setGameState] = useState<GameState>('TITLE');
+  const [cameraMode, setCameraMode] = useState<CameraMode>('CHASE');
+  const [bossLiveState, setBossLiveState] = useState<BossLiveState | null>(null);
+  const [campaignProgress, setCampaignProgress] = useState<CampaignProgress>(loadCampaignProgress());
+  const [isCampaignSelectOpen, setIsCampaignSelectOpen] = useState(false);
+  const [chapterClearSummary, setChapterClearSummary] = useState<{
+    chapter: ChapterConfig;
+    stars: number;
+    newlyUnlocked: ChapterId | null;
+    score: number;
+    timeSeconds: number;
+    nodesPreserved: number;
+  } | null>(null);
+
+  const [replayState, setReplayState] = useState<ReplayState>({
+    active: false,
+    currentIndex: 0,
+    totalKills: 0,
+    progress: 0,
+    playbackSpeed: 1.0,
+    isPaused: false,
+    cameraPerspective: 'ENEMY_POV',
+    currentKill: null,
+    killHistory: [],
+  });
+
   const [stats, setStats] = useState<PlayerStats>({
     hull: 100,
     maxHull: 100,
@@ -27,12 +71,15 @@ export default function App() {
     score: 0,
     multiplier: 1.0,
     resonance460k: 15,
+    chapter: 1,
     wave: 1,
+    totalWavesInChapter: 3,
     activeTotem: (localStorage.getItem('snbv_totem') as TotemId) || 'A',
     pulsesFired: 0,
     enemiesDestroyed: 0,
     nodesPreserved: 221,
     uptimeSeconds: 0,
+    bossActive: false,
   });
 
   const [nodes, setNodes] = useState<SovereignNode[]>(KEY_RADAR_NODES);
@@ -40,13 +87,13 @@ export default function App() {
     {
       id: 'init-1',
       timestamp: new Date().toISOString().split('T')[1].slice(0, 8) + 'Z',
-      message: 'SNBV-CORE] System boot complete. Active Totem: Node A.',
+      message: `${MANIFESTO_CONFIG.identity.token}] System boot complete. Active Core: ${MANIFESTO_CONFIG.realm.architecturalNexus}.`,
       type: 'INFO',
     },
     {
       id: 'init-2',
       timestamp: new Date().toISOString().split('T')[1].slice(0, 8) + 'Z',
-      message: 'ALLIANCE MESH: 221 sovereign realms operational and synchronized.',
+      message: `ALLIANCE MESH: ${MANIFESTO_CONFIG.scope.totalNations} sovereign realms operational. ${MANIFESTO_CONFIG.symbolism.formula}`,
       type: 'SUCCESS',
     },
   ]);
@@ -68,6 +115,13 @@ export default function App() {
       onStateChange: newState => setGameState(newState),
       onLogTelemetry: entry => setTelemetryLogs(prev => [...prev.slice(-40), entry]),
       onNodesUpdate: newNodes => setNodes(newNodes),
+      onBossUpdate: boss => setBossLiveState(boss),
+      onChapterComplete: summary => {
+        setChapterClearSummary(summary);
+        setCampaignProgress(loadCampaignProgress());
+      },
+      onCameraModeChange: mode => setCameraMode(mode),
+      onReplayUpdate: replay => setReplayState(replay),
     });
     controllerRef.current = controller;
 
@@ -102,7 +156,11 @@ export default function App() {
 
   // UI Handlers
   const handleStartGame = () => {
-    controllerRef.current?.startGame();
+    controllerRef.current?.startChapter(stats.chapter);
+  };
+
+  const handleSelectChapter = (chapterId: ChapterId) => {
+    controllerRef.current?.startChapter(chapterId);
   };
 
   const handlePauseGame = () => {
@@ -122,9 +180,12 @@ export default function App() {
     controllerRef.current?.switchTotem(id);
   };
 
+  const handleToggleCamera = () => {
+    controllerRef.current?.toggleCameraMode();
+  };
+
   const handleTriggerPulse = () => {
     if (gameState === 'PLAYING') {
-      // Fire double laser pulse
       sound.playLaser(true);
       controllerRef.current?.switchTotem(stats.activeTotem);
     } else {
@@ -149,6 +210,37 @@ export default function App() {
     });
   };
 
+  const handleNextChapter = (chapterId: ChapterId) => {
+    setChapterClearSummary(null);
+    controllerRef.current?.startChapter(chapterId);
+  };
+
+  const handleReplayChapter = (chapterId: ChapterId) => {
+    setChapterClearSummary(null);
+    controllerRef.current?.startChapter(chapterId);
+  };
+
+  // Replay Handlers
+  const handleStartCinematicReplay = () => {
+    controllerRef.current?.startCinematicReplay();
+  };
+
+  const handleExitCinematicReplay = () => {
+    controllerRef.current?.stopCinematicReplay();
+  };
+
+  const handleToggleReplayPause = () => {
+    controllerRef.current?.toggleReplayPause();
+  };
+
+  const handleSetReplaySpeed = (speed: number) => {
+    controllerRef.current?.setReplaySpeed(speed);
+  };
+
+  const handleSetReplayPerspective = (perspective: ReplayCameraPerspective) => {
+    controllerRef.current?.setReplayPerspective(perspective);
+  };
+
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-[#07090e] text-[#f0f6fc]">
       {/* CRT Scanline Filter Overlay */}
@@ -167,6 +259,8 @@ export default function App() {
         <TitleScreen
           onStart={handleStartGame}
           onOpenConsole={() => setIsConsoleOpen(true)}
+          onOpenCampaignSelect={() => setIsCampaignSelectOpen(true)}
+          campaignProgress={campaignProgress}
           audioMuted={audioMuted}
           onToggleAudio={handleToggleAudio}
           crtEnabled={crtEnabled}
@@ -177,6 +271,9 @@ export default function App() {
       {/* 2. Playing Perimeter HUD (Zero Center Occlusion) */}
       {gameState === 'PLAYING' && (
         <>
+          {/* Active Boss Status Gauge (Top-Center) */}
+          <BossStatusBar boss={bossLiveState} />
+
           <PerimeterHud
             stats={stats}
             nodes={nodes}
@@ -186,6 +283,9 @@ export default function App() {
             onToggleAudio={handleToggleAudio}
             crtEnabled={crtEnabled}
             onToggleCrt={handleToggleCrt}
+            cameraMode={cameraMode}
+            onToggleCamera={handleToggleCamera}
+            onOpenCampaignSelect={() => setIsCampaignSelectOpen(true)}
           />
 
           <BottomControlDock
@@ -195,6 +295,8 @@ export default function App() {
             onTriggerHarmonicWave={handleTriggerHarmonicWave}
             onOpenConsole={() => setIsConsoleOpen(true)}
             resonance460k={stats.resonance460k}
+            cameraMode={cameraMode}
+            onToggleCamera={handleToggleCamera}
           />
         </>
       )}
@@ -208,7 +310,41 @@ export default function App() {
         onOpenConsole={() => setIsConsoleOpen(true)}
       />
 
-      {/* 4. Complete Tactical Command Core Console Modal (Ctrl+K / Tab) */}
+      {/* 4. Chapter Clear / Sector Liberated Debrief Modal */}
+      {gameState === 'CHAPTER_CLEAR' && (
+        <ChapterClearModal
+          summary={chapterClearSummary}
+          onNextChapter={handleNextChapter}
+          onReplayChapter={handleReplayChapter}
+          onOpenCampaignSelect={() => {
+            setChapterClearSummary(null);
+            setIsCampaignSelectOpen(true);
+          }}
+          onStartCinematicReplay={handleStartCinematicReplay}
+        />
+      )}
+
+      {/* 5. Cinematic Battlefield Replay HUD (Perspective of Destroyed Enemies) */}
+      {gameState === 'REPLAY' && (
+        <ReplayHud
+          replay={replayState}
+          onTogglePause={handleToggleReplayPause}
+          onSetSpeed={handleSetReplaySpeed}
+          onSetPerspective={handleSetReplayPerspective}
+          onExitReplay={handleExitCinematicReplay}
+        />
+      )}
+
+      {/* 6. Campaign Sector Selector Modal */}
+      <CampaignSelectModal
+        isOpen={isCampaignSelectOpen}
+        onClose={() => setIsCampaignSelectOpen(false)}
+        onSelectChapter={handleSelectChapter}
+        progress={campaignProgress}
+        activeChapterId={stats.chapter}
+      />
+
+      {/* 7. Complete Tactical Command Core Console Modal (Ctrl+K / Tab) */}
       <TacticalConsoleModal
         isOpen={isConsoleOpen}
         onClose={() => setIsConsoleOpen(false)}

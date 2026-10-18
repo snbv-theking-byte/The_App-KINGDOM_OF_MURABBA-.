@@ -1,10 +1,13 @@
 import React from 'react';
-import { Volume2, VolumeX, Monitor, Terminal, Shield } from 'lucide-react';
+import { Volume2, VolumeX, Monitor, Terminal, Shield, Map } from 'lucide-react';
 import { sound } from '../audio/SoundSynth';
+import { CampaignProgress } from '../types/game';
 
 interface TitleScreenProps {
   onStart: () => void;
   onOpenConsole: () => void;
+  onOpenCampaignSelect: () => void;
+  campaignProgress: CampaignProgress;
   audioMuted: boolean;
   onToggleAudio: () => void;
   crtEnabled: boolean;
@@ -14,11 +17,18 @@ interface TitleScreenProps {
 export const TitleScreen: React.FC<TitleScreenProps> = ({
   onStart,
   onOpenConsole,
+  onOpenCampaignSelect,
+  campaignProgress,
   audioMuted,
   onToggleAudio,
   crtEnabled,
   onToggleCrt,
 }) => {
+  const totalStars = Object.values(campaignProgress.chapterRecords).reduce(
+    (acc, r) => acc + (r?.stars || 0),
+    0
+  );
+
   return (
     <div className="absolute inset-0 z-20 flex flex-col justify-between p-6 sm:p-10 pointer-events-none select-none">
       {/* Top Header Bar */}
@@ -34,6 +44,19 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Campaign Sectors Button */}
+          <button
+            onClick={() => {
+              sound.playClick();
+              onOpenCampaignSelect();
+            }}
+            aria-label="Campaign Sectors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono-custom bg-[#dfb15b]/15 hover:bg-[#dfb15b]/30 border border-[#dfb15b] text-[#ffd978] rounded transition-colors"
+          >
+            <Map className="w-3.5 h-3.5" />
+            <span>Campaign ({totalStars}/12 ★)</span>
+          </button>
+
           <button
             onClick={() => {
               sound.playClick();
@@ -112,7 +135,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
               fontWeight="700"
               letterSpacing="6"
             >
-              SNBV™ COMMAND CORE v3 · MUKAAB DEFENSE MATRIX
+              SNBV™ COMMAND CORE v4 · CAMPAIGN EDITION
             </text>
             <text
               x="50%"
@@ -123,7 +146,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
               fontFamily="JetBrains Mono, monospace"
               letterSpacing="3"
             >
-              400M CUBIC NEXUS · 221 SOVEREIGN NATIONS · 460,000E RESONANCE
+              4 CHAPTERS · MULTI-TIER BOSS TITANS · 221 SOVEREIGN NATIONS
             </text>
           </svg>
         </div>
@@ -135,32 +158,42 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
 
         <p className="text-xs text-[#a6b7cd] max-w-lg mb-8 leading-relaxed font-mono-custom">
           Field Marshal Interceptor standing by. Defend the sovereign coalition grid across Saudi Arabia, UAE, Egypt,
-          and the 221 world domains from cyber-kinetic incursion vectors.
+          and the 221 world domains from cyber-kinetic incursion vectors and Titan Dreadnoughts.
         </p>
 
-        {/* Primary Start CTA */}
-        <div className="pointer-events-auto flex flex-col items-center gap-3">
+        {/* Primary Start & Campaign Select CTAs */}
+        <div className="pointer-events-auto flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md">
           <button
             onClick={() => {
               sound.playClick();
               onStart();
             }}
-            className="group relative px-8 py-3.5 bg-gradient-to-b from-[#dfb15b]/30 to-[#825f1b]/40 hover:from-[#ffd978] hover:to-[#dfb15b] border-2 border-[#dfb15b] hover:border-[#ffd978] text-[#ffd978] hover:text-black font-mono-custom text-sm font-bold tracking-widest uppercase rounded shadow-[0_0_24px_rgba(223,177,91,0.35)] hover:shadow-[0_0_35px_rgba(255,217,120,0.65)] transition-all cursor-pointer transform hover:scale-[1.03] active:scale-[0.98]"
+            className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-b from-[#dfb15b]/30 to-[#825f1b]/40 hover:from-[#ffd978] hover:to-[#dfb15b] border-2 border-[#dfb15b] hover:border-[#ffd978] text-[#ffd978] hover:text-black font-mono-custom text-sm font-bold tracking-widest uppercase rounded shadow-[0_0_24px_rgba(223,177,91,0.35)] hover:shadow-[0_0_35px_rgba(255,217,120,0.65)] transition-all cursor-pointer transform hover:scale-[1.03] active:scale-[0.98]"
           >
-            [ ENTER / SPACE ] TO ENGAGE NEXUS
+            [ ENTER ] ENGAGE NEXUS
           </button>
 
-          {/* Single Flat Control-Hint Line */}
-          <div className="text-[11px] text-[#a6b7cd] tracking-wider font-mono-custom mt-2">
-            WASD Move · Space / Click Laser · 1-7 Totem Shift · Q/E Φ-Pulse · Esc Pause
-          </div>
+          <button
+            onClick={() => {
+              sound.playClick();
+              onOpenCampaignSelect();
+            }}
+            className="w-full sm:w-auto px-6 py-3.5 bg-black/60 hover:bg-[#dfb15b]/20 border border-[#dfb15b]/60 text-white hover:text-[#ffd978] font-mono-custom text-xs font-semibold tracking-wider uppercase rounded transition-all cursor-pointer"
+          >
+            SELECT SECTOR
+          </button>
+        </div>
+
+        {/* Single Flat Control-Hint Line */}
+        <div className="text-[11px] text-[#a6b7cd] tracking-wider font-mono-custom mt-4">
+          WASD Move · Space / Click Laser · C Camera View · 1-7 Totems · Q/E Φ-Pulse
         </div>
       </div>
 
       {/* Bottom Footer Info */}
       <div className="flex flex-wrap items-center justify-between text-[11px] text-[#a6b7cd]/80 font-mono-custom border-t border-[#dfb15b]/20 pt-3">
         <div>COMMANDER: SERGIO N. BERLANGA V. [CHEk0 Berlanga™]</div>
-        <div>PORT: kingofmurabba.slack.com:320 · LATENCY: 0.16ms</div>
+        <div>CAMPAIGN PROGRESS: {totalStars} / 12 STARS · PORT: kingofmurabba.slack.com:320</div>
       </div>
     </div>
   );
